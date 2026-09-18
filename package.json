@@ -1,0 +1,16 @@
+{
+  "name": "meshsos-monorepo",
+  "version": "1.0.0",
+  "description": "MeshSOS — A Saviour: Disaster response mesh platform (college final year project)",
+  "private": true,
+  "scripts": {
+    "backend": "cd backend && npm run dev",
+    "web": "cd web && npm run dev",
+    "mesh-relay": "cd backend && npm run mesh-relay",
+    "start:all": "concurrently \"npm run backend\" \"npm run web\"",
+    "install:all": "cd backend && npm install && cd ../web && npm install && cd ../mobile && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
