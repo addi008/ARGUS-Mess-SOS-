@@ -3,89 +3,93 @@
 ---
 
 ## Phase 1 — Environment Setup & Mesh Foundation
-**Date completed:** September 2026  
 **Status:** ✅ Complete
-
-### What was built
-
-| Component | Details |
-|---|---|
-| `/backend` | Node.js + Express scaffold with health-check route (`GET /api/health`), MongoDB connection via Mongoose, Socket.IO server initialized |
-| `/web` | React + Vite + Tailwind CSS project with Login page and Dashboard placeholder, React Router v6, JWT auth guard |
-| `/mobile` | Expo (React Native) app with 4-tab navigation: Home, SOS, Map, Messages |
-| `meshTransport` | Pluggable interface (`init / broadcast / onMessage / getNearbyNodes`) with two backends: `simulatedTransport.js` (active) and `realTransport.js` (placeholder for Bridgefy) |
-| `meshRelay.js` | Standalone Socket.IO server (`port 5001`) that relays packets between mobile devices on the same WiFi LAN |
-
-### Mesh simulation design
-
-```
-Device A                  Relay Server (5001)              Device B
-  |                              |                              |
-  |--- broadcast(packet) ------->|                              |
-  |                              |--- incoming_packet(packet) ->|
-  |                              |                              |
-  |                              |        (Device B re-relays if ttl > 0)
-  |                              |<--- broadcast_packet(relayed_packet) --|
-  |<-- incoming_packet(relayed) -|                              |
-```
-
-**TTL / hop-count flow:**
-- Each packet starts with `ttl: 3` and `hopCount: 0`
-- Each relaying device decrements `ttl` and increments `hopCount`
-- A packet stops propagating when `ttl === 0` or `hopCount >= MAX_HOP_COUNT (5)`
-- Packet IDs are tracked in a `Set` on each device to prevent duplicate delivery
-
-### How to demo with 2 devices on the same WiFi
-
-1. Find your LAN IP: `ipconfig` (Windows) → look for **IPv4 Address**
-2. In `mobile/src/config.js`, set `MESH_RELAY_URL` to `http://YOUR_LAN_IP:5001`
-3. Start the relay server: `cd backend && npm run mesh-relay`
-4. Run Expo: `cd mobile && npx expo start`
-5. Open the app on **two devices / emulators** connected to the same WiFi
-6. On Device A: go to **SOS** tab → tap **SEND SOS**
-7. On Device B: go to **Messages** tab → the packet should appear within ~1 second
-
-### How to run and test Phase 1
-
-```bash
-# 1. Install dependencies for all three apps
-cd MeshSOS/backend  && npm install
-cd ../web           && npm install
-cd ../mobile        && npm install
-
-# 2. Set up backend environment
-cd ../backend
-cp .env.example .env
-# Edit .env — set MONGODB_URI to your MongoDB URI
-
-# 3. Start the backend API server (port 5000)
-npm run dev
-
-# 4. (Separate terminal) Start the mesh relay server (port 5001)
-npm run mesh-relay
-
-# 5. (Separate terminal) Start the web app (port 5173)
-cd ../web && npm run dev
-# Open http://localhost:5173 → Login with any email/password (Phase 1 mock)
-
-# 6. (Separate terminal) Start the mobile app
-cd ../mobile && npx expo start
-# Press 'a' for Android emulator, 'i' for iOS simulator, or scan QR with Expo Go
-
-# 7. Test health check
-curl http://localhost:5000/api/health
-# Expected: { "status": "ok", "database": "connected" }
-```
-
-### TODOs carried to Phase 2
-
-- [ ] Implement Mongoose schemas: User, SOSRecord, Message, ResourceTag, Incident
-- [ ] JWT auth endpoints: POST /api/auth/register, POST /api/auth/login
-- [ ] REST endpoints: POST /api/sos, GET /api/sos, POST /api/message, etc.
-- [ ] Mobile SOS screen: GPS via expo-location + emergency type picker
-- [ ] Mobile local storage: SQLite via expo-sqlite
-- [ ] Mobile packet deduplication by packet ID before re-broadcast
+- Scaffolded `/backend`, `/web`, and `/mobile`.
+- Built the pluggable `meshTransport` layer (`simulatedTransport.js` on port 5001 + `realTransport.js` for Bridgefy).
+- Established hop count decrement and duplicate prevention on local LAN.
 
 ---
 
-*(Phase 2 notes will be appended here after Phase 2 is complete.)*
+## Phase 2 — SOS Packets, GPS, Offline Storage, Core API
+**Status:** ✅ Complete
+- **Backend Schemas & Models**: `User`, `SOSRecord`, `Message`, `ResourceTag`, `Incident`, `Zone`, `RescueTeam`, `AuditLog`.
+- **JWT Auth & RBAC**: `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`, `protect` and `authorize('admin', 'coordinator', 'viewer')` middleware.
+- **REST Endpoints**: `/api/sos`, `/api/incidents`, `/api/messages`, `/api/resources`.
+- **Mobile SOS Screen**: Live GPS coordinates capture (`expo-location`), 5 emergency categories (Medical, Trapped, Fire, Flood, Other), notes input, HMAC-SHA256 signing, and instant broadcast.
+- **Offline Storage**: SQLite / storage layer (`mobile/src/storage/db.js`) persisting all sent and received packets locally before sync.
+
+---
+
+## Phase 3 — Web Dashboard: Live Map & Incident Management
+**Status:** ✅ Complete
+- **JWT Authentication**: Full login flow with one-click demo credentials for Admin, Coordinator, and Viewer roles.
+- **Leaflet.js Tactical Map**: Rendered active SOS alerts as custom color-coded HTML markers with real-time pulsing animations for critical incidents.
+- **Socket.IO Live Integration**: Server emits `new_sos`, `incident_update`, `flagged_packet`, and `new_resource_tag` events for zero-refresh dashboard updates.
+- **Incident Command Table**: Filterable and sortable incident queue with status badges (`new`, `assigned`, `resolved`) and AI triage priority badges.
+- **Zone Polygon Overlays**: Interactive geographic zones rendered on map.
+
+---
+
+## Phase 4 — Sync Gateway, Offline Map, Resource Tagging
+**Status:** ✅ Complete
+- **Coordinator Batch Sync Gateway**: `POST /api/sync/batch` endpoint with server-side packet deduplication and real-time Socket.IO emission.
+- **Mobile Sync UI**: One-tap "Sync to Command Centre" in `HomeScreen.js` syncing all offline-stored alerts when internet connectivity is detected.
+- **Offline Situation Map**: `MapScreen.js` on mobile displays local cached pins with zero internet connectivity.
+- **Resource Tagging**: Mobile users can drop and broadcast field resource pins (water, medical camps, road hazards).
+
+---
+
+## Phase 5 — Admin Panel, Analytics & Cybersecurity Hardening
+**Status:** ✅ Complete
+- **HMAC-SHA256 Packet Signing**: Cryptographic integrity check preventing spoofed SOS packet injection.
+- **Anti-Spoofing Anomaly Detection**: Sliding window rate limiting + GPS teleport velocity checker ($> 180 \text{ km/h}$).
+- **"Needs Review" Quarantine Queue**: Flagged security packets are isolated into an admin review queue.
+- **Immutable Append-Only Audit Trail**: `AuditLog` collection with Mongoose pre-save protection against update/deletion.
+- **Low Battery Mode**: Mobile app monitors battery and enables power saving when battery drops below 15%.
+- **"I'm Safe" Broadcast**: One-tap check-in rendering green pins to reduce false urgency.
+- **CSV Data Export**: Post-disaster evaluation export endpoint `GET /api/admin/export/csv`.
+
+---
+
+## Phase 6 — AI Triage & Differentiating Features
+**Status:** ✅ Complete
+- **AI-Assisted Triage Scoring**: NLP keyword & category scoring engine (`utils/triage.js`) calculating urgency score (1-10) and priority (`critical`, `high`, `medium`, `low`).
+- **Nearest-Team Auto-Dispatch**: Haversine distance engine (`utils/security.js`) auto-recommending the closest available rescue unit in kilometers during team assignment.
+- **Beyond the Synopsis Docs**: Complete cybersecurity and resilience documentation in `docs/BEYOND_THE_SYNOPSIS.md`.
+
+---
+
+## Phase 7 — Integration Testing, Docs & Final Polish
+**Status:** ✅ Complete
+- **Automated Test Suite**: Automated unit and logic tests in `backend/tests/api.test.js` covering AI Triage scoring, HMAC signatures, GPS teleport anomaly checks, and Haversine distance.
+- **Architecture Specification**: Detailed Mermaid architecture and sequence diagrams in `docs/ARCHITECTURE.md`.
+- **API Reference**: Full endpoint documentation in `docs/API_REFERENCE.md`.
+- **Root README**: Comprehensive step-by-step setup and demo instructions.
+
+---
+
+## How to Run & Verify the Entire Platform
+
+```bash
+# 1. Start the Mesh Relay Server (Port 5001)
+cd MeshSOS/backend
+npm run mesh-relay
+
+# 2. Start the Backend API & Socket.IO Server (Port 5000)
+cd MeshSOS/backend
+npm start
+# Expected: Server running, Database connected, Seed data initialized
+
+# 3. Run Automated Tests
+cd MeshSOS/backend
+npm test
+
+# 4. Start the Web Command Centre Dashboard (Port 5173)
+cd MeshSOS/web
+npm run dev
+# Open http://localhost:5173 -> Log in with one-click "👑 Admin" button
+
+# 5. Start the Mobile App (Port 8081 / Expo)
+cd MeshSOS/mobile
+npx expo start
+```

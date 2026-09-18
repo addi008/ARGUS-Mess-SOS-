@@ -1,46 +1,47 @@
 /**
  * server.js  — MeshSOS Backend Entry Point
  *
- * Starts the Express API server and attaches Socket.IO.
- * Socket.IO events will be wired in Phase 3; for Phase 1 it just initialises.
+ * Express API server with MongoDB Mongoose connection, JWT auth,
+ * Socket.IO live event emission, and full ICS incident & mesh endpoints.
  */
 
-require('dotenv').config(); // Load .env variables FIRST
+require('dotenv').config();
 
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const connectDB = require('./config/db');
+const seedInitialData = require('./config/seed');
 
-// ── Connect to MongoDB ────────────────────────────────────────────────────────
-connectDB();
+// ── Connect to MongoDB and Seed Data ───────────────────────────────────────────
+connectDB().then(() => {
+  seedInitialData();
+});
 
 // ── Express App Setup ─────────────────────────────────────────────────────────
 const app = express();
 
-// Allow cross-origin requests from the React web app running on a different port
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:8081', '*'],
   credentials: true,
 }));
 
-// Parse incoming JSON request bodies
 app.use(express.json());
 
 // ── Routes ────────────────────────────────────────────────────────────────────
-app.use('/api/health', require('./routes/health'));
-
-// Phase 2 routes (added in next phase):
-// app.use('/api/auth',      require('./routes/auth'));
-// app.use('/api/sos',       require('./routes/sos'));
-// app.use('/api/incidents', require('./routes/incidents'));
-// app.use('/api/messages',  require('./routes/messages'));
-// app.use('/api/resources', require('./routes/resources'));
+app.use('/api/health',    require('./routes/health'));
+app.use('/api/auth',      require('./routes/auth'));
+app.use('/api/sos',       require('./routes/sos'));
+app.use('/api/incidents', require('./routes/incidents'));
+app.use('/api/messages',  require('./routes/messages'));
+app.use('/api/resources', require('./routes/resources'));
+app.use('/api/sync',      require('./routes/sync'));
+app.use('/api/admin',     require('./routes/admin'));
 
 // 404 catch-all for unknown routes
 app.use((req, res) => {
-  res.status(404).json({ error: 'Route not found' });
+  res.status(404).json({ success: false, error: 'Route not found' });
 });
 
 // ── HTTP Server + Socket.IO ───────────────────────────────────────────────────
@@ -48,19 +49,25 @@ const httpServer = http.createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: ['http://localhost:5173', 'http://localhost:3000'],
-    methods: ['GET', 'POST'],
+    origin: '*',
+    methods: ['GET', 'POST', 'PATCH'],
   },
 });
 
-// Attach io instance to app so controllers can emit events (Phase 3+)
+// Attach io instance to app so controllers can emit real-time events
 app.set('io', io);
 
 io.on('connection', (socket) => {
-  console.log(`🔌  Dashboard client connected: ${socket.id}`);
+  console.log(`🔌  Dashboard/Node client connected: ${socket.id}`);
+
+  // Allow clients to join specific room / zone channels if needed
+  socket.on('join_zone', (zoneId) => {
+    socket.join(`zone_${zoneId}`);
+    console.log(`Socket ${socket.id} joined zone_${zoneId}`);
+  });
 
   socket.on('disconnect', () => {
-    console.log(`🔌  Dashboard client disconnected: ${socket.id}`);
+    console.log(`🔌  Dashboard/Node client disconnected: ${socket.id}`);
   });
 });
 
@@ -68,5 +75,9 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, () => {
   console.log(`🚀  MeshSOS backend running on http://localhost:${PORT}`);
-  console.log(`    Health check → http://localhost:${PORT}/api/health`);
+  console.log(`    Health check  → http://localhost:${PORT}/api/health`);
+  console.log(`    Auth API      → http://localhost:${PORT}/api/auth`);
+  console.log(`    SOS API       → http://localhost:${PORT}/api/sos`);
+  console.log(`    Incidents API → http://localhost:${PORT}/api/incidents`);
+  console.log(`    Sync Gateway  → http://localhost:${PORT}/api/sync/batch`);
 });

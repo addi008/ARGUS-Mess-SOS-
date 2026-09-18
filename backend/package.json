@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "mesh-relay": "node meshRelay.js"
+    "mesh-relay": "node meshRelay.js",
+    "test": "node tests/runTests.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
