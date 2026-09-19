@@ -29,20 +29,15 @@ exports.getAnalytics = async (req, res) => {
     const byTypeAggregate = await Incident.aggregate([
       { $group: { _id: '$emergencyType', count: { $sum: 1 } } },
     ]);
-
     const byType = {};
-    byTypeAggregate.forEach(item => {
-      byType[item._id] = item.count;
-    });
+    byTypeAggregate.forEach(item => { byType[item._id] = item.count; });
 
     // Incidents by priority breakdown
     const byPriorityAggregate = await Incident.aggregate([
       { $group: { _id: '$priority', count: { $sum: 1 } } },
     ]);
     const byPriority = {};
-    byPriorityAggregate.forEach(item => {
-      byPriority[item._id] = item.count;
-    });
+    byPriorityAggregate.forEach(item => { byPriority[item._id] = item.count; });
 
     // Average triage score
     const avgTriage = await SOSRecord.aggregate([
@@ -52,6 +47,62 @@ exports.getAnalytics = async (req, res) => {
     // Active rescue teams
     const totalTeams = await RescueTeam.countDocuments();
     const availableTeams = await RescueTeam.countDocuments({ status: 'available' });
+
+    // ── 7-Day Incident Time Series (for Line Chart) ────────────────────────────
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
+    const dailyAggregate = await Incident.aggregate([
+      { $match: { createdAt: { $gte: sevenDaysAgo } } },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$createdAt' },
+            month: { $month: '$createdAt' },
+            day: { $dayOfMonth: '$createdAt' },
+          },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 } },
+    ]);
+
+    // Build a full 7-day array (fill missing days with 0)
+    const incidentsByDay = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const label = d.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' });
+      const found = dailyAggregate.find(
+        (a) => a._id.year === d.getFullYear() && a._id.month === d.getMonth() + 1 && a._id.day === d.getDate()
+      );
+      incidentsByDay.push({ label, count: found ? found.count : 0 });
+    }
+
+    // ── Incidents by Zone (for Bar Chart) ────────────────────────────────────
+    const byZoneAggregate = await Incident.aggregate([
+      { $match: { zone: { $ne: null } } },
+      { $group: { _id: '$zone', count: { $sum: 1 } } },
+      {
+        $lookup: {
+          from: 'zones',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'zoneInfo',
+        },
+      },
+      { $unwind: { path: '$zoneInfo', preserveNullAndEmpty: true } },
+      { $project: { zoneName: { $ifNull: ['$zoneInfo.name', 'Unknown Zone'] }, count: 1 } },
+      { $sort: { count: -1 } },
+      { $limit: 8 },
+    ]);
+    const byZone = byZoneAggregate.map((z) => ({ zone: z.zoneName, count: z.count }));
+
+    // ── Resolution Rate ───────────────────────────────────────────────────────
+    const resolutionRate = totalIncidents > 0
+      ? Math.round((resolvedIncidents / totalIncidents) * 100)
+      : 0;
 
     return res.status(200).json({
       success: true,
@@ -68,10 +119,15 @@ exports.getAnalytics = async (req, res) => {
           totalTeams,
           availableTeams,
           avgTriageScore: avgTriage[0] ? Math.round(avgTriage[0].avgScore * 10) / 10 : 5.0,
+          resolutionRate,
         },
         breakdowns: {
           byType,
           byPriority,
+          byZone,
+        },
+        timeSeries: {
+          incidentsByDay,
         },
       },
     });

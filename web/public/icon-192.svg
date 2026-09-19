@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="24" fill="#0a0f1e"/>
+  <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="110">🆘</text>
+  <rect x="0" y="150" width="192" height="42" rx="0" fill="#ef444422"/>
+  <text x="50%" y="176" dominant-baseline="middle" text-anchor="middle" font-size="16" font-weight="bold" fill="#ef4444" font-family="Arial, sans-serif" letter-spacing="2">MESHSOS</text>
+</svg>

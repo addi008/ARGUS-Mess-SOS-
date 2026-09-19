@@ -9,7 +9,7 @@
  *  - Quick Sync gateway trigger to upload queued offline records to Command Centre
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import {
   ActivityIndicator,
   Alert,
   Switch,
+  Animated,
 } from 'react-native';
 import * as meshTransport from '../mesh/meshTransport';
 import { getOrCreateDeviceId } from '../utils/deviceId';
@@ -33,6 +34,19 @@ export default function HomeScreen({ navigation }) {
   const [unsyncedStats, setUnsyncedStats] = useState({ totalUnsynced: 0, sosCount: 0 });
   const [syncing, setSyncing] = useState(false);
   const [lowBatteryMode, setLowBatteryMode] = useState(false);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  // Pulsing animation for mesh connection indicator
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.35, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulseAnim]);
 
   useEffect(() => {
     async function setup() {
@@ -117,9 +131,23 @@ export default function HomeScreen({ navigation }) {
 
       {/* Header */}
       <View style={styles.headerCard}>
-        <Text style={styles.emoji}>📡</Text>
+        {/* Animated pulse ring around emoji when mesh is active */}
+        <View style={styles.pulseContainer}>
+          <Animated.View style={[
+            styles.pulseRing,
+            { transform: [{ scale: pulseAnim }], opacity: nearbyCount > 0 ? 0.6 : 0 },
+          ]} />
+          <Text style={styles.emoji}>📡</Text>
+        </View>
         <Text style={styles.title}>MeshSOS — A Saviour</Text>
         <Text style={styles.subtitle}>Disaster Response Peer-to-Peer Mesh Node</Text>
+        {/* Connectivity status pill */}
+        <View style={styles.statusPill}>
+          <View style={[styles.statusDot, { backgroundColor: nearbyCount > 0 ? '#22c55e' : '#f59e0b' }]} />
+          <Text style={[styles.statusPillText, { color: nearbyCount > 0 ? '#22c55e' : '#f59e0b' }]}>
+            {nearbyCount > 0 ? `Mesh Active — ${nearbyCount} node${nearbyCount !== 1 ? 's' : ''} nearby` : 'Searching for mesh peers...'}
+          </Text>
+        </View>
       </View>
 
       {/* Telemetry Status Card */}
@@ -224,8 +252,30 @@ const styles = StyleSheet.create({
     color: '#fca5a5',
     fontSize: 11,
   },
-  headerCard: { alignItems: 'center', paddingVertical: 16 },
-  emoji: { fontSize: 44, marginBottom: 6 },
+  headerCard: { alignItems: 'center', paddingVertical: 20 },
+  pulseContainer: { position: 'relative', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  pulseRing: {
+    position: 'absolute',
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#22c55e',
+  },
+  emoji: { fontSize: 44, lineHeight: 54, zIndex: 1 },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    backgroundColor: '#111827',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#1f2937',
+  },
+  statusDot: { width: 7, height: 7, borderRadius: 4 },
+  statusPillText: { fontSize: 11, fontWeight: '600' },
   title: { fontSize: 22, fontWeight: 'bold', color: '#f9fafb', marginBottom: 2 },
   subtitle: { fontSize: 12, color: '#9ca3af' },
   card: {

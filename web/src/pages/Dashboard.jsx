@@ -1,6 +1,6 @@
 // src/pages/Dashboard.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import {
   MapContainer,
@@ -269,6 +269,26 @@ export default function Dashboard() {
               <p className="text-[11px] text-gray-400 font-medium">Peer-to-Peer Disaster Response Grid</p>
             </div>
           </div>
+
+          {/* Page Navigation Links */}
+          <nav className="hidden md:flex items-center gap-1 ml-4">
+            <Link
+              id="nav-analytics-link"
+              to="/analytics"
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-400 hover:text-white hover:bg-gray-800 transition flex items-center gap-1.5 border border-transparent hover:border-gray-700"
+            >
+              📊 Analytics
+            </Link>
+            {user.role === 'admin' && (
+              <Link
+                id="nav-admin-link"
+                to="/admin"
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-400 hover:text-white hover:bg-gray-800 transition flex items-center gap-1.5 border border-transparent hover:border-gray-700"
+              >
+                🔐 Admin Panel
+              </Link>
+            )}
+          </nav>
         </div>
 
         {/* Live Network Status Indicator */}
@@ -301,7 +321,7 @@ export default function Dashboard() {
 
       {/* ── Live Alert Toast Banner ────────────────────────────────────── */}
       {liveToast && (
-        <div className="bg-red-600 text-white px-6 py-2.5 font-bold text-xs flex items-center justify-between shadow-2xl animate-bounce">
+        <div className="bg-red-600 text-white px-6 py-2.5 font-bold text-xs flex items-center justify-between shadow-2xl animate-toast-in">
           <span>{liveToast}</span>
           <button onClick={() => setLiveToast(null)} className="text-white font-black text-sm">
             ✕
@@ -348,6 +368,23 @@ export default function Dashboard() {
                 📜 Immutable Audit Log ({auditLogs.length})
               </button>
             </>
+          )}
+
+          {/* Direct navigation to dedicated pages */}
+          <Link
+            to="/analytics"
+            className="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-gray-900 text-purple-400 hover:bg-purple-950/40 hover:text-purple-300 border border-purple-800/40"
+          >
+            📊 Analytics Hub
+          </Link>
+
+          {user.role === 'admin' && (
+            <Link
+              to="/admin"
+              className="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-gray-900 text-blue-400 hover:bg-blue-950/40 hover:text-blue-300 border border-blue-800/40"
+            >
+              ⚙️ Admin Panel
+            </Link>
           )}
         </div>
 

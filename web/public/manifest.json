@@ -1,0 +1,41 @@
+{
+  "name": "MeshSOS Command Centre",
+  "short_name": "MeshSOS",
+  "description": "Peer-to-Peer Disaster Response Command Dashboard — works offline on mesh networks.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#0a0f1e",
+  "background_color": "#0a0f1e",
+  "lang": "en-IN",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["utilities", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Live Operations",
+      "short_name": "Ops",
+      "description": "Open the live operations map",
+      "url": "/dashboard"
+    },
+    {
+      "name": "Analytics",
+      "short_name": "Analytics",
+      "description": "View incident analytics",
+      "url": "/analytics"
+    }
+  ]
+}

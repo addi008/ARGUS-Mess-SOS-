@@ -153,9 +153,21 @@ export default function SOSScreen() {
             {locLoading ? (
               <ActivityIndicator size="small" color="#3b82f6" />
             ) : location ? (
-              <Text style={styles.locText}>
-                {location.lat.toFixed(5)}, {location.lng.toFixed(5)} {location.simulated ? '(Simulated GPS)' : '±' + (location.accuracy ? location.accuracy.toFixed(0) + 'm' : '')}
-              </Text>
+              <>
+                <Text style={styles.locText}>
+                  {location.lat.toFixed(5)}, {location.lng.toFixed(5)}
+                </Text>
+                {/* GPS accuracy indicator */}
+                <View style={styles.gpsAccuracyRow}>
+                  <View style={[
+                    styles.gpsAccuracyDot,
+                    { backgroundColor: location.simulated ? '#f59e0b' : location.accuracy < 20 ? '#22c55e' : '#f97316' }
+                  ]} />
+                  <Text style={styles.gpsAccuracyText}>
+                    {location.simulated ? 'Simulated GPS (demo)' : `±${location.accuracy?.toFixed(0) || '?'}m accuracy`}
+                  </Text>
+                </View>
+              </>
             ) : (
               <Text style={styles.locTextMuted}>Location unavailable</Text>
             )}
@@ -166,7 +178,7 @@ export default function SOSScreen() {
         </View>
       </View>
 
-      {/* Emergency Category Selector */}
+      {/* Emergency Category Selector — Colored Cards */}
       <Text style={styles.sectionHeader}>Select Emergency Type</Text>
       <View style={styles.typeGrid}>
         {EMERGENCY_TYPES.map((t) => {
@@ -176,14 +188,20 @@ export default function SOSScreen() {
               key={t.id}
               style={[
                 styles.typeCard,
-                isSelected && { borderColor: t.color, backgroundColor: t.color + '22' },
+                isSelected && { borderColor: t.color, backgroundColor: `${t.color}22` },
               ]}
               onPress={() => setSelectedType(t.id)}
+              activeOpacity={0.75}
             >
-              <Text style={styles.typeIcon}>{t.icon}</Text>
-              <Text style={[styles.typeLabel, isSelected && { color: t.color, fontWeight: '700' }]}>
+              <View style={[styles.typeIconCircle, isSelected && { backgroundColor: `${t.color}33` }]}>
+                <Text style={styles.typeIcon}>{t.icon}</Text>
+              </View>
+              <Text style={[styles.typeLabel, isSelected && { color: t.color, fontWeight: '800' }]}>
                 {t.label}
               </Text>
+              {isSelected && (
+                <View style={[styles.typeSelectedDot, { backgroundColor: t.color }]} />
+              )}
             </TouchableOpacity>
           );
         })}
@@ -200,6 +218,24 @@ export default function SOSScreen() {
         multiline
         numberOfLines={3}
       />
+
+      {/* Triage Score Estimation Preview */}
+      {(() => {
+        const typeScores = { medical: 8, trapped: 8, fire: 9, flood: 7, other: 5 };
+        const base = typeScores[selectedType] || 5;
+        const bonus = message.length > 30 ? 1 : message.length > 10 ? 0.5 : 0;
+        const estimated = Math.min(10, (base + bonus)).toFixed(1);
+        const color = estimated >= 8 ? '#ef4444' : estimated >= 6 ? '#f97316' : '#22c55e';
+        return (
+          <View style={[styles.triagePreview, { borderColor: `${color}44` }]}>
+            <Text style={styles.triageLabel}>Estimated AI Triage Score</Text>
+            <Text style={[styles.triageScore, { color }]}>{estimated}/10</Text>
+            <Text style={styles.triageHint}>
+              {estimated >= 8 ? '🔴 Critical Priority' : estimated >= 6 ? '🟠 High Priority' : '🟡 Standard Priority'} — NLP scoring on backend
+            </Text>
+          </View>
+        );
+      })()}
 
       {/* Giant SOS Trigger Button */}
       <TouchableOpacity
@@ -311,6 +347,14 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginTop: 2,
   },
+  gpsAccuracyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 4,
+  },
+  gpsAccuracyDot: { width: 7, height: 7, borderRadius: 4 },
+  gpsAccuracyText: { fontSize: 11, color: '#9ca3af' },
   refreshBtn: {
     backgroundColor: '#1f2937',
     paddingHorizontal: 10,
@@ -352,11 +396,39 @@ const styles = StyleSheet.create({
     fontSize: 24,
     marginBottom: 4,
   },
+  typeIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1f2937',
+    marginBottom: 6,
+  },
+  typeSelectedDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginTop: 4,
+  },
   typeLabel: {
     fontSize: 11,
     color: '#9ca3af',
     textAlign: 'center',
   },
+  triagePreview: {
+    backgroundColor: '#111827',
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 14,
+    marginBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  triageLabel: { fontSize: 12, color: '#9ca3af', flex: 1 },
+  triageScore: { fontSize: 26, fontWeight: '900', minWidth: 52, textAlign: 'center' },
+  triageHint: { fontSize: 11, color: '#6b7280', flex: 2 },
   textInput: {
     backgroundColor: '#111827',
     borderRadius: 10,

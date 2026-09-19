@@ -30,6 +30,18 @@ const RESOURCE_TYPES = [
   { id: 'hazard_flood', label: 'Flash Flood', icon: '🌊' },
 ];
 
+// Type-based colored markers for SOS pins
+const SOS_TYPE_CONFIG = {
+  medical:      { icon: '🩺', color: '#ef4444', label: 'Medical' },
+  trapped:      { icon: '🧱', color: '#f97316', label: 'Trapped' },
+  fire:         { icon: '🔥', color: '#dc2626', label: 'Fire' },
+  flood:        { icon: '🌊', color: '#3b82f6', label: 'Flood' },
+  other:        { icon: '⚠️', color: '#8b5cf6', label: 'Other' },
+  safe_checkin: { icon: '💚', color: '#22c55e', label: 'Safe' },
+};
+
+const LEGEND = Object.values(SOS_TYPE_CONFIG);
+
 export default function MapScreen() {
   const [sosList, setSosList] = useState([]);
   const [resourceList, setResourceList] = useState([]);
@@ -37,6 +49,7 @@ export default function MapScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedTagType, setSelectedTagType] = useState('water');
   const [tagDescription, setTagDescription] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     refreshData();
@@ -45,12 +58,14 @@ export default function MapScreen() {
   }, []);
 
   async function refreshData() {
+    setRefreshing(true);
     const [sos, res] = await Promise.all([
       getAllSOSRecords(),
       getAllResourceTags(),
     ]);
     setSosList(sos);
     setResourceList(res);
+    setRefreshing(false);
   }
 
   async function handleCreateResourceTag() {
@@ -128,9 +143,32 @@ export default function MapScreen() {
         ))}
       </View>
 
+      {/* Legend Overlay */}
+      <View style={styles.legend}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+          {LEGEND.map(l => (
+            <View key={l.label} style={[styles.legendItem, { borderColor: `${l.color}55` }]}>
+              <Text style={styles.legendIcon}>{l.icon}</Text>
+              <Text style={[styles.legendLabel, { color: l.color }]}>{l.label}</Text>
+            </View>
+          ))}
+          <View style={[styles.legendItem, { borderColor: '#3b82f655' }]}>
+            <Text style={styles.legendIcon}>📍</Text>
+            <Text style={[styles.legendLabel, { color: '#60a5fa' }]}>Resource</Text>
+          </View>
+        </ScrollView>
+      </View>
+
       {/* Interactive Item List / Pin Grid */}
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        {filteredItems.length === 0 ? (
+        {/* Refresh indicator */}
+        {refreshing && (
+          <View style={styles.refreshIndicator}>
+            <View style={styles.refreshDot} />
+            <Text style={styles.refreshText}>Syncing mesh pins...</Text>
+          </View>
+        )}
+        {filteredItems.length === 0 && !refreshing ? (
           <View style={styles.empty}>
             <Text style={styles.emptyEmoji}>🗺️</Text>
             <Text style={styles.emptyTitle}>No Pins Recorded</Text>
@@ -141,15 +179,25 @@ export default function MapScreen() {
         ) : (
           filteredItems.map((item, idx) => {
             const isSOS = item.itemCategory === 'SOS';
+            const sosConfig = SOS_TYPE_CONFIG[item.emergencyType] || SOS_TYPE_CONFIG.other;
+            const markerIcon = isSOS ? sosConfig.icon : '📍';
+            const markerColor = isSOS ? sosConfig.color : '#3b82f6';
             return (
-              <View key={item.packetId || idx} style={[styles.card, isSOS ? styles.sosCard : styles.resCard]}>
+              <View key={item.packetId || idx} style={[styles.card, { borderColor: `${markerColor}44` }]}>
                 <View style={styles.cardHeader}>
-                  <Text style={styles.cardType}>
-                    {isSOS
-                      ? item.emergencyType === 'safe_checkin' ? '💚 Safe Check-In' : `🆘 ${item.emergencyType?.toUpperCase()}`
-                      : `📍 ${item.tagType?.toUpperCase()}`}
-                  </Text>
-                  <Text style={styles.cardHops}>{item.hopCount || 0} Hops</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={[styles.markerBadge, { backgroundColor: `${markerColor}22`, borderColor: `${markerColor}55` }]}>
+                      <Text style={styles.markerBadgeIcon}>{markerIcon}</Text>
+                    </View>
+                    <Text style={[styles.cardType, { color: markerColor }]}>
+                      {isSOS
+                        ? item.emergencyType === 'safe_checkin' ? 'Safe Check-In' : item.emergencyType?.toUpperCase()
+                        : item.tagType?.toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={[styles.hopsBadge, { backgroundColor: `${markerColor}15` }]}>
+                    <Text style={[styles.cardHops, { color: markerColor }]}>{item.hopCount || 0} Hops</Text>
+                  </View>
                 </View>
 
                 <Text style={styles.cardDesc}>
@@ -267,6 +315,44 @@ const styles = StyleSheet.create({
   },
   tabBtnText: { color: '#9ca3af', fontSize: 12, fontWeight: '600' },
   tabBtnTextActive: { color: '#ffffff' },
+  legend: {
+    flexDirection: 'row',
+    padding: 10,
+    paddingHorizontal: 14,
+    backgroundColor: '#0d1322',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1f2937',
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 20,
+    borderWidth: 1,
+    backgroundColor: '#111827',
+  },
+  legendIcon: { fontSize: 12 },
+  legendLabel: { fontSize: 10, fontWeight: '700' },
+  refreshIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    padding: 8,
+    backgroundColor: '#1d4ed822',
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  refreshDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#3b82f6' },
+  refreshText: { fontSize: 11, color: '#60a5fa' },
+  markerBadge: {
+    width: 30, height: 30, borderRadius: 15,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1,
+  },
+  markerBadgeIcon: { fontSize: 14 },
+  hopsBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
   scroll: { flex: 1 },
   scrollContent: { padding: 16, gap: 10, paddingBottom: 30 },
   card: {
@@ -281,16 +367,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
   },
-  cardType: { fontSize: 14, fontWeight: 'bold', color: '#f9fafb' },
+  cardType: { fontSize: 13, fontWeight: 'bold' },
   cardHops: {
     fontSize: 10,
-    color: '#60a5fa',
-    backgroundColor: '#1e3a8a44',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    fontWeight: '700',
   },
   cardDesc: { fontSize: 13, color: '#d1d5db', lineHeight: 18, marginBottom: 8 },
   cardFooter: {

@@ -66,6 +66,26 @@
 - **API Reference**: Full endpoint documentation in `docs/API_REFERENCE.md`.
 - **Root README**: Comprehensive step-by-step setup and demo instructions.
 
+## Phase 8 — Analytics Engine, Admin Panel, PWA Offline Support & Mobile Polish
+**Status:** ✅ Complete
+- **Dedicated Analytics Hub (`/analytics`)**:
+  - Live Chart.js visualizations: Incident Volume Timeline (line chart), Type Distribution Breakdown (donut chart with percentage legend), and Zone Activity Comparison (horizontal bar chart).
+  - High-visibility statistical cards: Total Incidents, Active Red Alerts, Units Deployed, Average Response Time, and System Triage Score.
+- **Unified Admin Control Panel (`/admin`)**:
+  - Live security anomaly quarantine queue management.
+  - Immutable audit logs browser with search/filter capabilities.
+  - Field rescue teams deployment status & active emergency zones tracker.
+  - Direct post-disaster CSV export triggering.
+- **Full Progressive Web App (PWA) Offline Architecture**:
+  - Created standard `manifest.json` with standalone mode and custom emergency icons.
+  - Developed custom Service Worker (`sw.js`) with cache-first strategy for static assets, network-first with cached fallback for APIs, and offline readiness banner.
+  - Configured `index.html` with theme color and auto service-worker registration.
+- **Mobile UX/UI Polish**:
+  - **HomeScreen**: Animated pulse ring on mesh connection status, dynamic network pill, and improved card layout.
+  - **SOSScreen**: Emergency category selector with colored visual cards, GPS accuracy indicator, and real-time AI triage score preview prior to broadcasting.
+  - **MapScreen**: Color-coded markers based on emergency classification, top legend row, and offline situation status indicator.
+  - **MessagesScreen**: Chat bubble layout with distinct sent vs. received bubble styling and accurate timestamp formatting.
+
 ---
 
 ## How to Run & Verify the Entire Platform

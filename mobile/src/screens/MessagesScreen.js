@@ -78,26 +78,48 @@ export default function MessagesScreen() {
 
   function renderItem({ item }) {
     const isMe = item.senderId === myId;
+    const time = new Date(item.deviceTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     return (
-      <View style={[styles.messageCard, isMe ? styles.myCard : styles.peerCard]}>
-        <View style={styles.msgHeader}>
-          <Text style={[styles.senderId, isMe && { color: '#93c5fd' }]}>
-            {isMe ? '👤 You (Local)' : `📡 Node: ${item.senderId?.slice(0, 10)}...`}
+      <View style={[
+        styles.bubbleRow,
+        isMe ? styles.bubbleRowRight : styles.bubbleRowLeft,
+      ]}>
+        {/* Avatar for peer messages */}
+        {!isMe && (
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>📡</Text>
+          </View>
+        )}
+
+        <View style={[
+          styles.bubble,
+          isMe ? styles.myBubble : styles.peerBubble,
+        ]}>
+          {/* Sender label for peer */}
+          {!isMe && (
+            <Text style={styles.senderLabel}>
+              Node: {item.senderId?.slice(0, 10)}...
+            </Text>
+          )}
+
+          {/* Message content */}
+          <Text style={[styles.bubbleContent, isMe && styles.myBubbleContent]}>
+            {item.content}
           </Text>
-          <Text style={styles.timeText}>
-            {new Date(item.deviceTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </Text>
+
+          {/* Footer: time + hop count + sync status */}
+          <View style={styles.bubbleFooter}>
+            <Text style={styles.hopText}>
+              {item.hopCount === 0 ? '0-hop' : `${item.hopCount} hops`}
+            </Text>
+            <Text style={styles.bubbleTime}>{time}</Text>
+            <Text style={styles.syncStatus}>{item.synced ? '✓✓' : '⏳'}</Text>
+          </View>
         </View>
 
-        <Text style={styles.content}>{item.content}</Text>
-
-        <View style={styles.footerRow}>
-          <Text style={styles.hopBadge}>
-            {item.hopCount === 0 ? 'Direct 0-Hop' : `${item.hopCount} Mesh Hops`}
-          </Text>
-          <Text style={styles.statusText}>{item.synced ? '✓ Cloud Synced' : '⏳ Mesh Only'}</Text>
-        </View>
+        {/* Spacer for peer messages */}
+        {isMe && <View style={{ width: 32 }} />}
       </View>
     );
   }
@@ -108,6 +130,15 @@ export default function MessagesScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={80}
     >
+      {/* Header count */}
+      {messages.length > 0 && (
+        <View style={styles.chatHeader}>
+          <Text style={styles.chatHeaderText}>
+            📡 Peer Mesh Chat — {messages.length} message{messages.length !== 1 ? 's' : ''}
+          </Text>
+        </View>
+      )}
+
       {messages.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyEmoji}>💬</Text>
@@ -141,7 +172,7 @@ export default function MessagesScreen() {
           onPress={handleSendMessage}
           disabled={!inputText.trim()}
         >
-          <Text style={styles.sendBtnText}>➔</Text>
+          <Text style={styles.sendBtnText}>➞</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -150,7 +181,16 @@ export default function MessagesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0a0f1e' },
-  listContent: { padding: 16, gap: 10, paddingBottom: 20 },
+  chatHeader: {
+    padding: '10px 16px',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#111827',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1f2937',
+  },
+  chatHeaderText: { fontSize: 12, color: '#9ca3af', fontWeight: '600' },
+  listContent: { padding: 16, gap: 8, paddingBottom: 20 },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -160,48 +200,56 @@ const styles = StyleSheet.create({
   emptyEmoji: { fontSize: 48, marginBottom: 12 },
   emptyTitle: { fontSize: 18, fontWeight: 'bold', color: '#f9fafb', marginBottom: 6 },
   emptyText: { fontSize: 13, color: '#6b7280', textAlign: 'center', lineHeight: 20 },
-  messageCard: {
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
+
+  // Chat bubble styles
+  bubbleRow: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: 2 },
+  bubbleRowRight: { justifyContent: 'flex-end' },
+  bubbleRowLeft: { justifyContent: 'flex-start' },
+  avatar: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: '#1f2937',
+    alignItems: 'center', justifyContent: 'center',
+    marginRight: 6, marginBottom: 4,
   },
-  myCard: {
-    backgroundColor: '#1e3a8a33',
-    borderColor: '#2563eb',
-    alignSelf: 'flex-end',
-    width: '90%',
+  avatarText: { fontSize: 14 },
+  bubble: {
+    maxWidth: '80%',
+    borderRadius: 16,
+    padding: 10,
+    paddingHorizontal: 12,
   },
-  peerCard: {
+  myBubble: {
+    backgroundColor: '#1d4ed8',
+    borderBottomRightRadius: 4,
+  },
+  peerBubble: {
     backgroundColor: '#111827',
+    borderWidth: 1,
     borderColor: '#1f2937',
-    alignSelf: 'flex-start',
-    width: '90%',
+    borderBottomLeftRadius: 4,
   },
-  msgHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  senderId: { fontSize: 11, fontWeight: 'bold', color: '#60a5fa' },
-  timeText: { fontSize: 10, color: '#6b7280' },
-  content: { color: '#f9fafb', fontSize: 14, lineHeight: 20, marginBottom: 8 },
-  footerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#1f293744',
-    paddingTop: 4,
-  },
-  hopBadge: {
-    color: '#9ca3af',
+  senderLabel: {
     fontSize: 10,
-    backgroundColor: '#030712',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    color: '#60a5fa',
+    fontWeight: '700',
+    marginBottom: 3,
   },
-  statusText: { fontSize: 10, color: '#4b5563' },
+  bubbleContent: {
+    color: '#d1d5db',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  myBubbleContent: { color: '#ffffff' },
+  bubbleFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  hopText: { fontSize: 9, color: '#6b7280', fontFamily: 'monospace' },
+  bubbleTime: { fontSize: 9, color: '#6b7280', flex: 1, textAlign: 'right' },
+  syncStatus: { fontSize: 10, color: '#22c55e' },
+
   composerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -220,6 +268,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 14,
     maxHeight: 90,
+    borderWidth: 1,
+    borderColor: '#1f2937',
   },
   sendBtn: {
     backgroundColor: '#2563eb',

@@ -2,13 +2,33 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/sos-icon.svg" />
+    <!-- PWA: Theme color & icons -->
+    <meta name="theme-color" content="#0a0f1e" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MeshSOS" />
+    <link rel="apple-touch-icon" href="/icon-192.svg" />
+    <!-- PWA manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/icon-192.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="MeshSOS Command Centre — Disaster Response Dashboard" />
+    <meta name="description" content="MeshSOS Command Centre — Peer-to-Peer Disaster Response Dashboard with mesh networking, live incident tracking, and offline support." />
     <title>MeshSOS — Command Centre</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <!-- PWA: Register Service Worker -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('[PWA] Service Worker registered:', reg.scope))
+            .catch(err => console.warn('[PWA] SW registration failed:', err));
+        });
+      }
+    </script>
   </body>
 </html>
