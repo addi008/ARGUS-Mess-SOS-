@@ -7,8 +7,9 @@
     "backend": "cd backend && npm run dev",
     "web": "cd web && npm run dev",
     "mesh-relay": "cd backend && npm run mesh-relay",
-    "start:all": "concurrently \"npm run backend\" \"npm run web\"",
-    "install:all": "cd backend && npm install && cd ../web && npm install && cd ../mobile && npm install"
+    "mobile": "cd mobile && npm start",
+    "start:all": "concurrently \"npm run backend\" \"npm run web\" \"npm run mesh-relay\"",
+    "install:all": "cd backend && npm install && cd ../web && npm install && cd ../mobile && npm install --legacy-peer-deps"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

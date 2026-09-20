@@ -19,6 +19,7 @@ export const MESH_TRANSPORT = 'simulated';
 // Example: 'http://192.168.1.15:5001'
 export const MESH_RELAY_URL = 'http://10.0.2.2:5001'; // Android emulator default
 export const BACKEND_URL    = 'http://10.0.2.2:5000'; // Android emulator default
+export const BACKEND_API_URL = BACKEND_URL;
 
 // ─── Mesh parameters ─────────────────────────────────────────────────────────
 export const DEFAULT_TTL    = 3;   // Number of hops a packet can travel
